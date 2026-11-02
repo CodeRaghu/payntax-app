@@ -1,0 +1,73 @@
+# Local stack: postgres, redis, s3 (SeaweedFS), backend (Django), worker (Celery), frontend (Next.js).
+# Synthetic data only.
+x-backend: &backend
+  build:
+    context: ./backend
+    args:
+      INSTALL_DEV: "true"
+  env_file: .env
+  volumes:
+    - ./backend:/app
+    - ./contract:/contract
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+    s3:
+      condition: service_started
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports: ["5432:5432"]
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  s3:
+    # S3-compatible storage for local dev (SeaweedFS). Stands in for AWS S3; the app only talks boto3.
+    image: chrislusf/seaweedfs:latest
+    env_file: .env
+    entrypoint: >
+      sh -c 'mkdir -p /etc/seaweedfs &&
+             printf "{\"identities\":[{\"name\":\"local\",\"credentials\":[{\"accessKey\":\"%s\",\"secretKey\":\"%s\"}],\"actions\":[\"Admin\",\"Read\",\"Write\",\"List\",\"Tagging\"]}]}" "$$AWS_ACCESS_KEY_ID" "$$AWS_SECRET_ACCESS_KEY" > /etc/seaweedfs/s3.json &&
+             exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -master.volumeSizeLimitMB=256'
+    ports: ["8333:8333"]
+    volumes: [s3-data:/data]
+
+  backend:
+    <<: *backend
+    command: sh -c "python manage.py migrate --noinput && python manage.py ensure_bucket && python manage.py runserver 0.0.0.0:8000"
+    ports: ["8000:8000"]
+
+  worker:
+    <<: *backend
+    command: celery -A config worker --loglevel=info --concurrency=2
+
+  frontend:
+    build: ./frontend
+    env_file: .env
+    environment:
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - ./contract:/contract
+      - /app/node_modules
+      - /app/.next
+    ports: ["3000:3000"]
+    depends_on: [backend]
+
+volumes:
+  postgres-data:
+  s3-data:

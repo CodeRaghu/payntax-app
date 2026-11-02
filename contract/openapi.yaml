@@ -1,0 +1,2158 @@
+openapi: 3.0.3
+info:
+  title: PayNTax API
+  version: 0.1.0
+  description: 'Contract between the PayNTax web app and API. Source of truth: contract/openapi.yaml.'
+paths:
+  /api/audit-events:
+    get:
+      operationId: audit_events_list
+      description: 'SCR-11: the firm owner reads the firm''s audit log.'
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: Filter by action prefix, e.g. 'client.'
+      - in: query
+        name: object_id
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: user
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - audit-events
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditEventList'
+          description: ''
+  /api/auth/invitations/{token}:
+    get:
+      operationId: auth_invitation_preview
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationPreview'
+          description: ''
+  /api/auth/invitations/{token}/accept:
+    post:
+      operationId: auth_invitation_accept
+      description: Sign-in endpoints are rate limited per client (10/min).
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptInvitationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcceptInvitationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcceptInvitationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/auth/login:
+    post:
+      operationId: auth_login
+      description: Sign-in endpoints are rate limited per client (10/min).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/auth/logout:
+    post:
+      operationId: auth_logout
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/auth/mfa/setup:
+    post:
+      operationId: auth_mfa_setup
+      description: 'SCR-02: start TOTP enrollment. Only allowed while the user has
+        no confirmed device.'
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaSetup'
+          description: ''
+  /api/auth/mfa/verify:
+    post:
+      operationId: auth_mfa_verify
+      description: 'SCR-02: confirm enrollment or answer the challenge at sign-in.'
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/auth/session:
+    get:
+      operationId: auth_session
+      description: Who is signed in and which step of sign-in they are at. Also sets
+        the CSRF cookie.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/auth/signup:
+    post:
+      operationId: auth_signup
+      description: 'SCR-01: a CPA creates a firm and becomes its owner (REQ-ACC-001).'
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/billing/checkout:
+    post:
+      operationId: billing_checkout
+      description: 'SCR-03: start hosted checkout. The browser is redirected; card
+        data never reaches us.'
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Redirect'
+          description: ''
+  /api/billing/fake/complete:
+    post:
+      operationId: billing_fake_complete
+      description: 'Local/dev only: stands in for the Stripe webhook that activates
+        the subscription.'
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FakeCompleteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FakeCompleteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FakeCompleteRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/billing/plans:
+    get:
+      operationId: billing_plans
+      tags:
+      - billing
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+          description: ''
+  /api/billing/portal:
+    post:
+      operationId: billing_portal
+      description: 'SCR-10: the owner manages billing in the provider''s portal (REQ-BIL-003).'
+      tags:
+      - billing
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Redirect'
+          description: ''
+  /api/billing/subscription:
+    get:
+      operationId: billing_subscription
+      tags:
+      - billing
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/clients:
+    get:
+      operationId: clients_list
+      description: 'SCR-04 / SCR-05: create, search and edit clients (REQ-CLI-001).'
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Name, email or SSN last 4
+      tags:
+      - clients
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClientList'
+          description: ''
+    post:
+      operationId: clients_create
+      description: 'SCR-04 / SCR-05: create, search and edit clients (REQ-CLI-001).'
+      tags:
+      - clients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+  /api/clients/{id}:
+    get:
+      operationId: clients_retrieve
+      description: 'SCR-04 / SCR-05: create, search and edit clients (REQ-CLI-001).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this client.
+        required: true
+      tags:
+      - clients
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+    patch:
+      operationId: clients_partial_update
+      description: 'SCR-04 / SCR-05: create, search and edit clients (REQ-CLI-001).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this client.
+        required: true
+      tags:
+      - clients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClientRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+    delete:
+      operationId: clients_destroy
+      description: 'SCR-04 / SCR-05: create, search and edit clients (REQ-CLI-001).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this client.
+        required: true
+      tags:
+      - clients
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/clients/{id}/reveal-ssn:
+    post:
+      operationId: clients_reveal_ssn
+      description: Show the full SSN. Owner and Preparer only; always audit logged.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this client.
+        required: true
+      tags:
+      - clients
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevealSsn'
+          description: ''
+  /api/documents:
+    get:
+      operationId: documents_list
+      description: SCR-07 (upload and status) and SCR-08 (side-by-side review).
+      parameters:
+      - in: query
+        name: tax_return
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+          description: ''
+    post:
+      operationId: documents_create_upload
+      description: 'Step 1 of upload: register the file and get a pre-signed URL to
+        PUT it to.'
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UploadRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+          description: ''
+  /api/documents/{id}:
+    get:
+      operationId: documents_retrieve
+      description: SCR-07 (upload and status) and SCR-08 (side-by-side review).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+    delete:
+      operationId: documents_destroy
+      description: SCR-07 (upload and status) and SCR-08 (side-by-side review).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/documents/{id}/complete:
+    post:
+      operationId: documents_complete_upload
+      description: 'Step 2 of upload: the browser finished the PUT; verify the object
+        and queue processing.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/documents/{id}/fields/{field_id}:
+    patch:
+      operationId: documents_update_field
+      description: 'SCR-08: correct a value or acknowledge a warning. Every change
+        is audit logged.'
+      parameters:
+      - in: path
+        name: field_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFieldUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFieldUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFieldUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+  /api/documents/{id}/mark-reviewed:
+    post:
+      operationId: documents_mark_reviewed
+      description: 'REQ-REV-004: only reviewed documents feed the return.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+  /api/documents/{id}/retry:
+    post:
+      operationId: documents_retry
+      description: SCR-07 (upload and status) and SCR-08 (side-by-side review).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/documents/{id}/reveal-sensitive:
+    post:
+      operationId: documents_reveal_sensitive
+      description: Show masked values (SSN) in full. Audit logged.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveValues'
+          description: ''
+  /api/firm:
+    get:
+      operationId: firm_retrieve
+      description: 'SCR-10: firm profile. Everyone can read it; only the owner can
+        rename it.'
+      tags:
+      - firm
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Firm'
+          description: ''
+    patch:
+      operationId: firm_partial_update
+      description: 'SCR-10: firm profile. Everyone can read it; only the owner can
+        rename it.'
+      tags:
+      - firm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFirmRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Firm'
+          description: ''
+  /api/firm/invitations:
+    get:
+      operationId: firm_invitations_list
+      tags:
+      - firm
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+          description: ''
+    post:
+      operationId: firm_invitations_create
+      tags:
+      - firm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+          description: ''
+  /api/firm/invitations/{id}:
+    delete:
+      operationId: firm_invitations_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this invitation.
+        required: true
+      tags:
+      - firm
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/firm/users:
+    get:
+      operationId: firm_users_list
+      description: 'SCR-10: firm members. The owner changes roles or deactivates users
+        (REQ-ACC-003).'
+      tags:
+      - firm
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+          description: ''
+  /api/firm/users/{id}:
+    patch:
+      operationId: firm_users_partial_update
+      description: 'SCR-10: firm members. The owner changes roles or deactivates users
+        (REQ-ACC-003).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user.
+        required: true
+      tags:
+      - firm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFirmUserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFirmUserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFirmUserUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/health:
+    get:
+      operationId: health
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+  /api/returns:
+    get:
+      operationId: returns_list
+      description: 'SCR-06: open a return for a client and tax year (REQ-CLI-002).'
+      parameters:
+      - in: query
+        name: client
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - returns
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaxReturnList'
+          description: ''
+    post:
+      operationId: returns_create
+      description: 'SCR-06: open a return for a client and tax year (REQ-CLI-002).'
+      tags:
+      - returns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxReturnRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaxReturnRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaxReturnRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxReturn'
+          description: ''
+  /api/returns/{id}:
+    get:
+      operationId: returns_retrieve
+      description: 'SCR-06: open a return for a client and tax year (REQ-CLI-002).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tax return.
+        required: true
+      tags:
+      - returns
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxReturn'
+          description: ''
+    patch:
+      operationId: returns_partial_update
+      description: 'SCR-06: open a return for a client and tax year (REQ-CLI-002).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tax return.
+        required: true
+      tags:
+      - returns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaxReturnUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTaxReturnUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTaxReturnUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxReturn'
+          description: ''
+  /api/returns/{id}/form-1040:
+    get:
+      operationId: form1040_retrieve
+      description: 'SCR-09: 1040 lines computed from reviewed documents plus CPA edits.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - returns
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form1040'
+          description: ''
+  /api/returns/{id}/form-1040.pdf:
+    get:
+      operationId: form1040_pdf
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - returns
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/returns/{id}/form-1040/lines/{line}:
+    patch:
+      operationId: form1040_update_line
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: line
+        schema:
+          type: string
+        required: true
+      tags:
+      - returns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFormLineUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFormLineUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFormLineUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form1040'
+          description: ''
+components:
+  schemas:
+    AcceptInvitationRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - full_name
+      - password
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+        user_email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        action:
+          type: string
+          readOnly: true
+        object_type:
+          type: string
+          readOnly: true
+        object_id:
+          type: string
+          readOnly: true
+        metadata:
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - action
+      - at
+      - id
+      - ip_address
+      - metadata
+      - object_id
+      - object_type
+      - user_email
+    CheckoutRequestRequest:
+      type: object
+      properties:
+        plan:
+          type: string
+          minLength: 1
+      required:
+      - plan
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        ssn_masked:
+          type: string
+          readOnly: true
+        filing_status:
+          $ref: '#/components/schemas/FilingStatusEnum'
+        street:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 2
+        zip_code:
+          type: string
+          maxLength: 10
+        notes:
+          type: string
+        return_count:
+          type: integer
+          readOnly: true
+          default: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - return_count
+      - ssn_masked
+      - updated_at
+    ClientRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        ssn:
+          type: string
+          writeOnly: true
+        filing_status:
+          $ref: '#/components/schemas/FilingStatusEnum'
+        street:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          minLength: 1
+          maxLength: 2
+        zip_code:
+          type: string
+          maxLength: 10
+        notes:
+          type: string
+      required:
+      - first_name
+      - last_name
+    ContentTypeEnum:
+      enum:
+      - application/pdf
+      - image/jpeg
+      - image/png
+      type: string
+      description: |-
+        * `application/pdf` - application/pdf
+        * `image/jpeg` - image/jpeg
+        * `image/png` - image/png
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tax_return:
+          type: string
+          format: uuid
+          readOnly: true
+        filename:
+          type: string
+          readOnly: true
+        content_type:
+          type: string
+          readOnly: true
+        size:
+          type: integer
+          readOnly: true
+        doc_type:
+          allOf:
+          - $ref: '#/components/schemas/DocumentTypeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/DocumentStatusEnum'
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        attention_count:
+          type: integer
+          readOnly: true
+        uploaded_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - attention_count
+      - content_type
+      - created_at
+      - doc_type
+      - error_message
+      - filename
+      - id
+      - reviewed_at
+      - size
+      - status
+      - tax_return
+      - updated_at
+      - uploaded_by_name
+    DocumentCounts:
+      type: object
+      properties:
+        total:
+          type: integer
+        processing:
+          type: integer
+        needs_attention:
+          type: integer
+        reviewed:
+          type: integer
+      required:
+      - needs_attention
+      - processing
+      - reviewed
+      - total
+    DocumentDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tax_return:
+          type: string
+          format: uuid
+          readOnly: true
+        filename:
+          type: string
+          readOnly: true
+        content_type:
+          type: string
+          readOnly: true
+        size:
+          type: integer
+          readOnly: true
+        doc_type:
+          allOf:
+          - $ref: '#/components/schemas/DocumentTypeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/DocumentStatusEnum'
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        attention_count:
+          type: integer
+          readOnly: true
+        uploaded_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        file_url:
+          type: string
+          nullable: true
+          readOnly: true
+        extracted_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtractedField'
+          readOnly: true
+        reviewed_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        confidence_threshold:
+          type: number
+          format: double
+          readOnly: true
+      required:
+      - attention_count
+      - confidence_threshold
+      - content_type
+      - created_at
+      - doc_type
+      - error_message
+      - extracted_fields
+      - file_url
+      - filename
+      - id
+      - reviewed_at
+      - reviewed_by_name
+      - size
+      - status
+      - tax_return
+      - updated_at
+      - uploaded_by_name
+    DocumentStatusEnum:
+      enum:
+      - uploading
+      - uploaded
+      - scanning
+      - rejected
+      - classifying
+      - extracting
+      - needs_review
+      - ready_for_review
+      - reviewed
+      - failed
+      type: string
+      description: |-
+        * `uploading` - Uploading
+        * `uploaded` - Uploaded
+        * `scanning` - Scanning
+        * `rejected` - Rejected
+        * `classifying` - Classifying
+        * `extracting` - Extracting
+        * `needs_review` - Needs review
+        * `ready_for_review` - Ready for review
+        * `reviewed` - Reviewed
+        * `failed` - Extraction failed
+    DocumentTypeEnum:
+      enum:
+      - unknown
+      - w2
+      - pay_stub
+      - other
+      type: string
+      description: |-
+        * `unknown` - Not classified yet
+        * `w2` - W-2
+        * `pay_stub` - Pay stub
+        * `other` - Other
+    ExtractedField:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        value:
+          type: string
+          readOnly: true
+        original_value:
+          type: string
+          readOnly: true
+        confidence:
+          type: number
+          format: double
+          readOnly: true
+        low_confidence:
+          type: boolean
+          readOnly: true
+        rule_issue:
+          type: string
+          readOnly: true
+        acknowledged:
+          type: boolean
+          readOnly: true
+        corrected:
+          type: boolean
+          readOnly: true
+        needs_attention:
+          type: boolean
+          readOnly: true
+        sensitive:
+          type: boolean
+          readOnly: true
+        bbox:
+          type: array
+          items:
+            type: number
+            format: double
+          readOnly: true
+          nullable: true
+          description: '[x, y, width, height] as fractions of the page'
+      required:
+      - acknowledged
+      - bbox
+      - confidence
+      - corrected
+      - id
+      - kind
+      - label
+      - low_confidence
+      - name
+      - needs_attention
+      - original_value
+      - rule_issue
+      - sensitive
+      - value
+    FakeCompleteRequest:
+      type: object
+      properties:
+        session:
+          type: string
+          minLength: 1
+      required:
+      - session
+    FilingStatusEnum:
+      enum:
+      - single
+      - married_joint
+      - married_separate
+      - head_of_household
+      - qualifying_surviving_spouse
+      type: string
+      description: |-
+        * `single` - Single
+        * `married_joint` - Married filing jointly
+        * `married_separate` - Married filing separately
+        * `head_of_household` - Head of household
+        * `qualifying_surviving_spouse` - Qualifying surviving spouse
+    Firm:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+    Form1040:
+      type: object
+      properties:
+        tax_return:
+          type: string
+          format: uuid
+        tax_year:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormLine'
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+      - lines
+      - tax_return
+      - tax_year
+      - warnings
+    FormLine:
+      type: object
+      properties:
+        line:
+          type: string
+        label:
+          type: string
+        section:
+          type: string
+        editable:
+          type: boolean
+        value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        computed_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+      required:
+      - computed_value
+      - editable
+      - label
+      - line
+      - section
+      - source
+      - value
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        accepted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        invite_url:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - accepted_at
+      - created_at
+      - email
+      - expires_at
+      - id
+      - invite_url
+    InvitationPreview:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firm_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - email
+      - firm_name
+      - role
+    InvitationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - email
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    MfaSetup:
+      type: object
+      properties:
+        otpauth_url:
+          type: string
+        secret:
+          type: string
+        qr_svg:
+          type: string
+      required:
+      - otpauth_url
+      - qr_svg
+      - secret
+    MfaVerifyRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\d{6}$
+      required:
+      - code
+    PaginatedAuditEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+    PaginatedClientList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Client'
+    PaginatedTaxReturnList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxReturn'
+    PatchedClientRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        ssn:
+          type: string
+          writeOnly: true
+        filing_status:
+          $ref: '#/components/schemas/FilingStatusEnum'
+        street:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          minLength: 1
+          maxLength: 2
+        zip_code:
+          type: string
+          maxLength: 10
+        notes:
+          type: string
+    PatchedFieldUpdateRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          maxLength: 200
+        acknowledged:
+          type: boolean
+    PatchedFirmRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+    PatchedFirmUserUpdateRequest:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+    PatchedFormLineUpdateRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: null resets the line to the computed value
+    PatchedTaxReturnUpdateRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ReturnStatusEnum'
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        monthly_price_cents:
+          type: integer
+        description:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+        trial_days:
+          type: integer
+      required:
+      - description
+      - features
+      - id
+      - monthly_price_cents
+      - name
+      - trial_days
+    Redirect:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+      required:
+      - url
+    ReturnStatusEnum:
+      enum:
+      - draft
+      - in_review
+      - ready
+      - complete
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `in_review` - In review
+        * `ready` - Ready
+        * `complete` - Complete
+    RevealSsn:
+      type: object
+      properties:
+        ssn:
+          type: string
+      required:
+      - ssn
+    RoleEnum:
+      enum:
+      - owner
+      - preparer
+      type: string
+      description: |-
+        * `owner` - Owner
+        * `preparer` - Preparer
+    SensitiveValues:
+      type: object
+      properties:
+        values:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - values
+    Session:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        mfa_enrolled:
+          type: boolean
+        mfa_verified:
+          type: boolean
+        subscription_status:
+          type: string
+          nullable: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          nullable: true
+        firm:
+          allOf:
+          - $ref: '#/components/schemas/Firm'
+          nullable: true
+      required:
+      - authenticated
+      - firm
+      - mfa_enrolled
+      - mfa_verified
+      - subscription_status
+      - user
+    SignupRequest:
+      type: object
+      properties:
+        firm_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - firm_name
+      - full_name
+      - password
+    SourceEnum:
+      enum:
+      - w2
+      - computed
+      - cpa
+      - missing
+      type: string
+      description: |-
+        * `w2` - w2
+        * `computed` - computed
+        * `cpa` - cpa
+        * `missing` - missing
+    Subscription:
+      type: object
+      properties:
+        plan:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SubscriptionStatusEnum'
+          readOnly: true
+        trial_ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        current_period_end:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - current_period_end
+      - plan
+      - status
+      - trial_ends_at
+    SubscriptionStatusEnum:
+      enum:
+      - trialing
+      - active
+      - past_due
+      - canceled
+      type: string
+      description: |-
+        * `trialing` - Trialing
+        * `active` - Active
+        * `past_due` - Past due
+        * `canceled` - Canceled
+    TaxReturn:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        client:
+          type: string
+          format: uuid
+        client_name:
+          type: string
+          readOnly: true
+        tax_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        form_type:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReturnStatusEnum'
+          readOnly: true
+        document_counts:
+          allOf:
+          - $ref: '#/components/schemas/DocumentCounts'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client
+      - client_name
+      - created_at
+      - document_counts
+      - form_type
+      - id
+      - status
+      - tax_year
+      - updated_at
+    TaxReturnRequest:
+      type: object
+      properties:
+        client:
+          type: string
+          format: uuid
+        tax_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - client
+      - tax_year
+    UploadInstructions:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        method:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - headers
+      - method
+      - url
+    UploadRequestRequest:
+      type: object
+      properties:
+        tax_return:
+          type: string
+          format: uuid
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content_type:
+          $ref: '#/components/schemas/ContentTypeEnum'
+        size:
+          type: integer
+          minimum: 1
+      required:
+      - content_type
+      - filename
+      - size
+      - tax_return
+    UploadResponse:
+      type: object
+      properties:
+        document:
+          $ref: '#/components/schemas/Document'
+        upload:
+          $ref: '#/components/schemas/UploadInstructions'
+      required:
+      - document
+      - upload
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+        mfa_enrolled:
+          type: boolean
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - email
+      - full_name
+      - id
+      - last_login
+      - mfa_enrolled
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

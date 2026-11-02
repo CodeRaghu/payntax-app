@@ -1,0 +1,17 @@
+export const keys = {
+  session: ["session"] as const,
+  clients: (search = "", page = 1) => ["clients", { search, page }] as const,
+  clientsAll: ["clients"] as const,
+  client: (id: string) => ["client", id] as const,
+  returns: (clientId: string) => ["returns", { clientId }] as const,
+  taxReturn: (id: string) => ["return", id] as const,
+  documents: (returnId: string) => ["documents", returnId] as const,
+  document: (id: string) => ["document", id] as const,
+  form1040: (returnId: string) => ["form1040", returnId] as const,
+  plans: ["plans"] as const,
+  subscription: ["subscription"] as const,
+  firm: ["firm"] as const,
+  firmUsers: ["firm-users"] as const,
+  invitations: ["invitations"] as const,
+  audit: (filters: Record<string, string | number>) => ["audit", filters] as const,
+};
